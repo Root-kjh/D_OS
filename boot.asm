@@ -65,17 +65,17 @@
 %define LDRSEG		02000h		; 20000h ~ 9ffffh
 
 entry:
-		cli
-		mov		ax, INITSS
-		mov		ss, ax
-		mov		sp, INITSP
+		cli ; 인터럽트를 금지시키는 명령어
+		mov		ax, INITSS 
+		mov		ss, ax ;Stack Segment 를 ss register에 전달
+		mov		sp, INITSP ;Stack Pointer를 sp register에 전달
 		sti
 		
 		; re-load
-		cld
+		cld ; 인터럽트 금지 해제
 		mov		ax, INITSEG
 		mov		es, ax
-		xor		di, di
+		xor		di, di ; di초기화
 		mov		ax, BOOTSEG
 		mov		ds, ax
 		xor		si, si
