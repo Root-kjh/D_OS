@@ -1,37 +1,90 @@
-;부트로더, bootsect.asm
-org     0x7C00  
+%include "init1.inc"
+[org 0]
+
+jmp 07c0h:start
+
+start:
+    mov ax, cs
+    mov ds, ax
+
+    mov ax, 0xB800
+    mov es, ax
+    mov di, 0
+    mov ax, word[msgBack]
+    mov cx, 0x7FF
+
+paint:
+    mov word[es:di], ax
+    add di, 2
+    dec cx
+
+    jnz paint
+
+    mov edi, 0
+    mov byte [es:edi], 'R'
+    inc edi
+    mov byte [es:edi], 0x17
+    inc edi
+    mov byte [es:edi], 'e'
+    inc edi
+    mov byte [es:edi], 0x17
+    inc edi
+    mov byte [es:edi], 'a'
+    inc edi
+    mov byte [es:edi], 0x17
+    inc edi
+    mov byte [es:edi], 'l'
+    inc edi
+    mov byte [es:edi], 0x17
+    inc edi
+
+disk_read:
+    mov ax, 0x1000
     
-;배경 지우기
-mov     ax, 0xB800
-mov     es, ax
-mov     ax, [Background]
-mov     bx, 0
-mov     cx, 80*25*2
-CLS:
-    mov     [es:bx], ax
-    add     bx, 1
-    loop    CLS
-  
-;하드 섹터 읽기
-READ:
-    mov     ax, 0x0800     ; ES:BX 에 로드된다
-    mov     es, ax         ; 0x0800:0000 =  0x8000번지
-    mov     bx, 0
- 
-    mov     ah, 2          ; 읽기 명령
-    mov     al, 1          ; 읽을 섹터 수
-    mov     ch, 0          ; 실린더 번호
-    mov     cl, 2          ; 섹터 번호
-    mov     dh, 0          ; 헤드 번호
-    mov     dl, 0       ; 드라이브 번호, 0x00 = A:, 0x80 = C:
- 
-    int     0x13           ; 명령 실행
-    jc      READ           ; 실패시 재시도
-  
-jmp     0x8000
-  
-;변수영역
-Background      db      0x00
-  
-times 510-($-$$) db 0x00
-dw 0xaa55
+    mov es, ax
+    mov bx, 0
+
+    mov ah, 2
+    mov dl, 0
+    mov ch, 0
+    mov dh, 0
+    mov cl, 2
+    mov al, 1
+
+    int 13h
+    jc disk_read
+
+    cli
+
+    lgdt[gdtr]
+
+    mov eax, cr0
+    inc eax
+    mov cr0, eax
+
+    jmp $+2
+    nop
+    nop
+
+    mov bx, SysDataSelector
+    mov ds, bx
+    mov es, bx
+    mov ss, bx
+
+    jmp dword SysCodeSelector:0x10000
+
+    msgBack db '.', 0x17
+
+gdtr:
+    dw gdt_end - gdt -1
+    dd gdt+0x7c00
+
+gdt:
+    dd 0x00000000, 0x00000000
+    dd 0x0000FFFF, 0x00CF9A00
+    dd 0x0000FFFF, 0x00CF9200
+    dd 0x8000FFFF, 0x0040920B
+
+gdt_end:
+    times 510-($-$$) db 0
+    dw 0xAA55
